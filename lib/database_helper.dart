@@ -217,6 +217,15 @@ class DatabaseHelper {
     );
   }
 
+  Future<int> deleteIncome(int id) async {
+    final db = await database;
+    return await db.delete(
+      tableIncome,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<List<Map<String, dynamic>>> getUserIncome(int userId, {String? startDate, String? endDate}) async {
     final db = await database;
     String whereClause = 'user_id = ?';

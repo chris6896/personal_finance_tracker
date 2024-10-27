@@ -24,15 +24,16 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
     _loadIncome();
   }
 
-  void _loadIncome() async {
+  Future<void> _loadIncome() async {
     final db = DatabaseHelper();
     final incomeList = await db.getUserIncome(widget.userId);
+
     setState(() {
       _incomeHistory = incomeList.map((income) => IncomeEntry.fromMap(income)).toList();
     });
   }
 
-  void _addOrUpdateIncome() async {
+  Future<void> _addOrUpdateIncome() async {
     String input = _incomeController.text;
     if (_isValidNumber(input)) {
       final amount = double.parse(input);
@@ -40,24 +41,56 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
         'amount': amount,
         'date': DateTime.now().toIso8601String(),
         'frequency': _selectedFrequency,
+        'name': 'Income',  // Add a default name if needed
       };
       final db = DatabaseHelper();
 
-      if (_editingEntry != null) {
-        // Update existing entry
-        await db.insertIncome(widget.userId, incomeData);
-      } else {
-        // Add new entry
-        await db.insertIncome(widget.userId, incomeData);
-      }
+      try {
+        int result;
+        if (_editingEntry != null) {
+          result = await db.insertIncome(widget.userId, incomeData);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Income updated successfully!")),
+          );
+          _editingEntry = null;
+        } else {
+          result = await db.insertIncome(widget.userId, incomeData);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Income added successfully!")),
+          );
+        }
 
-      _loadIncome(); // Reload income after addition/update
-      _resetForm();
+        if (result == -1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Failed to save income entry. Please try again.")),
+          );
+        } else {
+          await _loadIncome();
+          _resetForm();
+        }
+
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("An error occurred: $e")),
+        );
+      }
     } else {
       setState(() {
         _errorMessage = "Please enter a valid number.";
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_errorMessage!)),
+      );
     }
+  }
+
+  Future<void> _deleteIncome(IncomeEntry entry) async {
+    final db = DatabaseHelper();
+    await db.deleteIncome(entry.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Income deleted successfully!")),
+    );
+    await _loadIncome();
   }
 
   bool _isValidNumber(String input) {
@@ -71,10 +104,16 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
       _incomeController.text = entry.amount.toString();
       _selectedFrequency = entry.frequency;
     });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Editing income entry...")),
+    );
   }
 
   void _cancelEditing() {
     _resetForm();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Editing canceled")),
+    );
   }
 
   void _resetForm() {
@@ -216,12 +255,7 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
                           IconButton(
                             icon: Icon(Icons.delete),
                             onPressed: () {
-                              setState(() {
-                                _incomeHistory.removeAt(index);
-                                if (_editingEntry == entry) {
-                                  _cancelEditing();
-                                }
-                              });
+                              _deleteIncome(entry);
                             },
                           ),
                         ],
@@ -239,11 +273,13 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
 }
 
 class IncomeEntry {
+  final int id;
   final DateTime date;
   final double amount;
   final String frequency;
 
   IncomeEntry({
+    required this.id,
     required this.date,
     required this.amount,
     required this.frequency,
@@ -251,6 +287,7 @@ class IncomeEntry {
 
   static IncomeEntry fromMap(Map<String, dynamic> map) {
     return IncomeEntry(
+      id: map['id'],
       date: DateTime.parse(map['date']),
       amount: map['amount'],
       frequency: map['frequency'],
