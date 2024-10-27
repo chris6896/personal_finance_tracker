@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'income_tracking_screen.dart';
 import 'expense_tracking_screen.dart';
+import 'savings_tracking_screen.dart';  // Import the SavingsTrackingScreen
 
 class HomeScreen extends StatelessWidget {
   final int userId;
@@ -86,7 +87,14 @@ class AppDrawer extends StatelessWidget {
               arguments: {'userId': userId},
             );
           }),
-          _buildDrawerItem(context, Icons.favorite, 'Savings', null),
+          _buildDrawerItem(context, Icons.favorite, 'Savings', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SavingsTrackingScreen(userId: userId),
+              ),
+            );
+          }),
           _buildDrawerItem(context, Icons.show_chart, 'Investments', null),
           _buildDrawerItem(context, Icons.money, 'Expenses', () {
             Navigator.pushNamed(

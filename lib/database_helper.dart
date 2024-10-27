@@ -88,6 +88,7 @@ class DatabaseHelper {
         user_id INTEGER NOT NULL,
         amount REAL NOT NULL,
         target_amount REAL,
+        interval TEXT,
         description TEXT,
         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES $tableUsers(id) ON DELETE CASCADE
@@ -223,6 +224,43 @@ class DatabaseHelper {
       tableIncome,
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  Future<int> insertSavings(int userId, Map<String, dynamic> savings) async {
+    final db = await database;
+    savings['user_id'] = userId;
+    savings['last_updated'] = DateTime.now().toIso8601String();
+    return await db.insert(tableSavings, savings);
+  }
+
+  Future<int> updateSavings(int savingsId, Map<String, dynamic> savings) async {
+    final db = await database;
+    savings['last_updated'] = DateTime.now().toIso8601String();
+    return await db.update(
+      tableSavings,
+      savings,
+      where: 'id = ?',
+      whereArgs: [savingsId],
+    );
+  }
+
+  Future<int> deleteSavings(int id) async {
+    final db = await database;
+    return await db.delete(
+      tableSavings,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getUserSavings(int userId) async {
+    final db = await database;
+    return await db.query(
+      tableSavings,
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'last_updated DESC',
     );
   }
 
