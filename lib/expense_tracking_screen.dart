@@ -15,7 +15,7 @@ class _ExpenseTrackingScreenState extends State<ExpenseTrackingScreen> {
   List<ExpenseEntry> _expenseHistory = [];
   String? _errorMessage;
   ExpenseEntry? _editingEntry;
-  String _selectedCategory = 'Food and Drink';
+  String _selectedCategory = 'Food and Drink'; //Default category
   final List<String> _categories = [
     'Food and Drink',
     'Transportation',
