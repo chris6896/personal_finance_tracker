@@ -234,7 +234,6 @@ class DatabaseHelper {
   Future<int> insertSavings(int userId, Map<String, dynamic> savings) async {
     final db = await database;
     savings['user_id'] = userId;
-    savings['date'] = DateTime.now().toIso8601String();
     return await db.insert(tableSavings, savings);
   }
 

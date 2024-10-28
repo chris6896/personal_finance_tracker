@@ -28,63 +28,95 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
   }
 
   Future<void> _loadSavings() async {
-    final db = DatabaseHelper();
-    final savingsList = await db.getUserSavings(widget.userId);
-    setState(() {
-      _savingsHistory = savingsList.map((savings) => SavingsEntry.fromMap(savings)).toList();
-    });
+    try {
+      final db = DatabaseHelper();
+      final savingsList = await db.getUserSavings(widget.userId);
+      print("Retrieved savings from DB: $savingsList"); // Debug print
+      setState(() {
+        _savingsHistory = savingsList.map((savings) => SavingsEntry.fromMap(savings)).toList();
+      });
+      print("Parsed savings history: $_savingsHistory"); // Debug print
+    } catch (e) {
+      print("Error in _loadSavings: $e"); // Debug print
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    }
   }
 
   Future<void> _addOrUpdateSavings() async {
-    String input = _savingsController.text;
-    String targetInput = _targetAmountController.text;
+    try {
+      print("Starting _addOrUpdateSavings"); // Debug print
+      String input = _savingsController.text;
+      String targetInput = _targetAmountController.text;
 
-    if (_isValidNumber(input) && _isValidNumber(targetInput)) {
-      final amount = double.parse(input);
-      final targetAmount = double.parse(targetInput);
+      if (_isValidNumber(input) && _isValidNumber(targetInput)) {
+        final amount = double.parse(input);
+        final targetAmount = double.parse(targetInput);
 
-      // Check if the savings amount exceeds the target amount
-      if (amount > targetAmount) {
-        setState(() {
-          _errorMessage = "Savings amount exceeds target amount.";
-        });
-        return;
-      }
-      final interval = _selectedInterval.isNotEmpty ? _selectedInterval : 'Daily';
-      final savingsData = {
-        'amount': amount,
-        'interval': interval,
-        'target_amount': targetAmount,
-        'description': _descriptionController.text,
-        'last_updated': DateTime.now().toIso8601String(),
-        'user_id': widget.userId,
-      };
+        print("Parsed amounts - amount: $amount, target: $targetAmount"); // Debug print
 
-      final db = DatabaseHelper();
+        if (amount > targetAmount) {
+          setState(() {
+            _errorMessage = "Savings amount exceeds target amount.";
+          });
+          return;
+        }
+        
+        final interval = _selectedInterval.isNotEmpty ? _selectedInterval : 'Daily';
+        final savingsData = {
+          'amount': amount,
+          'interval': interval,
+          'target_amount': targetAmount,
+          'description': _descriptionController.text,
+          'last_updated': DateTime.now().toIso8601String(),
+          'user_id': widget.userId,
+        };
 
-      // If editing, update the existing entry
-      if (_editingEntry != null) {
-        await db.updateSavings(_editingEntry!.id, savingsData);
-        _editingEntry = null;
+        print("Prepared savings data: $savingsData"); // Debug print
+
+        final db = DatabaseHelper();
+
+        if (_editingEntry != null) {
+          print("Updating existing entry: ${_editingEntry!.id}"); // Debug print
+          await db.updateSavings(_editingEntry!.id, savingsData);
+          _editingEntry = null;
+        } else {
+          print("Inserting new entry"); // Debug print
+          final result = await db.insertSavings(widget.userId, savingsData);
+          print("Insert result: $result"); // Debug print
+        }
+
+        await _loadSavings();
+        print("Savings history after update: $_savingsHistory"); // Debug print
+        _resetForm();
       } else {
-        // Add new entry
-        await db.insertSavings(widget.userId, savingsData);
+        print("Invalid number input"); // Debug print
+        setState(() {
+          _errorMessage = "Please enter valid numbers for amount and target amount.";
+        });
       }
-
-      // Reload savings after addition/update
-      _loadSavings();
-      _resetForm();
-    } else {
+    } catch (e, stackTrace) {
+      print("Error in _addOrUpdateSavings: $e"); // Debug print
+      print("Stack trace: $stackTrace"); // Debug print
       setState(() {
-        _errorMessage = "Please enter valid numbers for amount and target amount.";
+        _errorMessage = e.toString();
       });
     }
   }
 
   Future<void> _deleteSavings(SavingsEntry entry) async {
-    final db = DatabaseHelper();
-    await db.deleteSavings(entry.id);
-    _loadSavings();
+    try {
+      print("Deleting entry: ${entry.id}"); // Debug print
+      final db = DatabaseHelper();
+      await db.deleteSavings(entry.id);
+      await _loadSavings();
+    } catch (e) {
+      print("Error deleting savings: $e"); // Debug print
+      setState(() {
+        _errorMessage = "Error deleting entry: $e";
+      });
+    }
   }
 
   bool _isValidNumber(String input) {
@@ -93,6 +125,7 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
   }
 
   void _editSavings(SavingsEntry entry) {
+    print("Editing entry: ${entry.id}"); // Debug print
     setState(() {
       _editingEntry = entry;
       _savingsController.text = entry.amount.toString();
@@ -300,13 +333,25 @@ class SavingsEntry {
   });
 
   static SavingsEntry fromMap(Map<String, dynamic> map) {
-    return SavingsEntry(
-      id: map['id'],
-      date: DateTime.parse(map['date']),
-      amount: map['amount'],
-      targetAmount: map['target_amount'] ?? 0.0,
-      interval: map['interval'],
-      description: map['description'] ?? '',
-    );
+    try {
+      return SavingsEntry(
+        id: map['id'],
+        date: DateTime.parse(map['last_updated']),
+        amount: (map['amount'] as num).toDouble(),
+        targetAmount: (map['target_amount'] as num?)?.toDouble() ?? 0.0,
+        interval: map['interval'] ?? 'Daily',
+        description: map['description'] ?? '',
+      );
+    } catch (e, stackTrace) {
+      print("Error parsing map: $map"); // Debug print
+      print("Error details: $e"); // Debug print
+      print("Stack trace: $stackTrace"); // Debug print
+      rethrow;
+    }
+  }
+
+  @override
+  String toString() {
+    return 'SavingsEntry(id: $id, date: $date, amount: $amount, targetAmount: $targetAmount, interval: $interval, description: $description)';
   }
 }
