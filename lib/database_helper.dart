@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:crypto/crypto.dart';
@@ -188,7 +190,19 @@ class DatabaseHelper {
     }
     return null;
   }
-
+  Future<String?> getUsername(int userId) async {
+    final db = await database;
+    final result = await db.query(
+      tableUsers,
+      columns: ['username'],
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+    if (result.isNotEmpty){
+      return result.first['username'] as String?;
+    }
+    return null;
+  }
   Future<int> insertIncome(int userId, Map<String, dynamic> income) async {
     final db = await database;
     try {

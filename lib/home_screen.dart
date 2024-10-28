@@ -38,7 +38,7 @@ class _HomeScreenContentState extends State<HomeScreenContent> {
       appBar: AppBar(
         title: const Text('Home'),
         leading: IconButton(
-          icon: const Icon(Icons.menu),  // Changed to menu icon for drawer
+          icon: const Icon(Icons.menu),
           onPressed: () {
             _scaffoldKey.currentState?.openDrawer();
           },
@@ -58,31 +58,46 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final DatabaseHelper dbHelper = DatabaseHelper();
 
     return Drawer(
       width: screenWidth * 0.5,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: Colors.red[600],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 40, color: Colors.red),
+          FutureBuilder<String?>(
+            future: dbHelper.getUsername(userId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const DrawerHeader(
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                  ),
+                  child: Center(child: CircularProgressIndicator(color: Colors.white)),
+                );
+              }
+              final username = snapshot.data ?? "Guest";
+              return DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.red[600],
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Username',
-                  style: TextStyle(color: Colors.white, fontSize: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.person, size: 40, color: Colors.red),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      username,
+                      style: const TextStyle(color: Colors.white, fontSize: 24),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
           _buildDrawerItem(context, Icons.dashboard, 'Report', () {
             Navigator.pushNamed(
