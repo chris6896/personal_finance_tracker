@@ -15,8 +15,12 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
   List<IncomeEntry> _incomeHistory = [];
   String? _errorMessage;
   IncomeEntry? _editingEntry;
+
   String _selectedFrequency = 'Daily';
   final List<String> _frequencies = ['Daily', 'Weekly', 'Monthly', 'One-time'];
+
+  String _selectedCategory = 'Salary';
+  final List<String> _categories = ['Salary', 'Freelance', 'Investment', 'Gift', 'Other'];
 
   @override
   void initState() {
@@ -41,7 +45,8 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
         'amount': amount,
         'date': DateTime.now().toIso8601String(),
         'frequency': _selectedFrequency,
-        'name': 'Income',  // Add a default name if needed
+        'category': _selectedCategory,
+        'name': 'Income',  // Placeholder name
       };
       final db = DatabaseHelper();
 
@@ -72,7 +77,6 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
           }
         }
 
-        // Reload income if insertion or update was successful
         if (result != -1) {
           await _loadIncome();
           _resetForm();
@@ -112,6 +116,7 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
       _editingEntry = entry;
       _incomeController.text = entry.amount.toString();
       _selectedFrequency = entry.frequency;
+      _selectedCategory = entry.category;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Editing income entry...")),
@@ -129,6 +134,7 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
     setState(() {
       _incomeController.clear();
       _selectedFrequency = 'Daily';
+      _selectedCategory = 'Salary';
       _errorMessage = null;
       _editingEntry = null;
     });
@@ -203,6 +209,25 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
                       },
                     ),
                     SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: _selectedCategory,
+                      decoration: InputDecoration(
+                        labelText: 'Category',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _categories.map((category) {
+                        return DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategory = value!;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _addOrUpdateIncome,
                       child: Text(_editingEntry != null ? 'Update' : 'Add'),
@@ -249,7 +274,7 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           Text(
-                            entry.frequency,
+                            "${entry.frequency} - ${entry.category}",
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
@@ -286,12 +311,14 @@ class IncomeEntry {
   final DateTime date;
   final double amount;
   final String frequency;
+  final String category;
 
   IncomeEntry({
     required this.id,
     required this.date,
     required this.amount,
     required this.frequency,
+    required this.category,
   });
 
   static IncomeEntry fromMap(Map<String, dynamic> map) {
@@ -300,6 +327,7 @@ class IncomeEntry {
       date: DateTime.parse(map['date']),
       amount: map['amount'],
       frequency: map['frequency'],
+      category: map['category'],
     );
   }
 }

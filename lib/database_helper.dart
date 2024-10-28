@@ -29,7 +29,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'finance_tracker.db');
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -61,6 +61,7 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         description TEXT,
         category TEXT,
+        frequency TEXT,
         date TEXT NOT NULL,
         amount REAL NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -119,6 +120,9 @@ class DatabaseHelper {
     if (oldVersion < 3) {
       await db.execute('ALTER TABLE $tableUsers ADD COLUMN age INTEGER');
       await db.execute('ALTER TABLE $tableUsers ADD COLUMN email TEXT UNIQUE');
+    }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE $tableIncome ADD COLUMN frequency TEXT');
     }
   }
 
