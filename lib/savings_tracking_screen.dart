@@ -254,7 +254,7 @@ class SavingsEntry {
   static SavingsEntry fromMap(Map<String, dynamic> map) {
     return SavingsEntry(
       id: map['id'],
-      date: DateTime.parse(map['last_updated']),
+      date: DateTime.parse(map['date']),
       amount: map['amount'],
       interval: map['interval'],
     );

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'income_tracking_screen.dart';
 import 'expense_tracking_screen.dart';
-import 'savings_tracking_screen.dart';  // Import the SavingsTrackingScreen
+import 'savings_tracking_screen.dart';
+import 'report_screen.dart'; // Import ReportScreen
+import 'investments_screen.dart'; // Import InvestmentsScreen
 
 class HomeScreen extends StatelessWidget {
   final int userId;
@@ -79,7 +81,13 @@ class AppDrawer extends StatelessWidget {
               ],
             ),
           ),
-          _buildDrawerItem(context, Icons.dashboard, 'Report', null),
+          _buildDrawerItem(context, Icons.dashboard, 'Report', () {
+            Navigator.pushNamed(
+              context,
+              '/report',
+              arguments: {'userId': userId},
+            );
+          }),
           _buildDrawerItem(context, Icons.home, 'Home', () {
             Navigator.pushReplacementNamed(
               context,
@@ -95,7 +103,13 @@ class AppDrawer extends StatelessWidget {
               ),
             );
           }),
-          _buildDrawerItem(context, Icons.show_chart, 'Investments', null),
+          _buildDrawerItem(context, Icons.show_chart, 'Investments', () {
+            Navigator.pushNamed(
+              context,
+              '/investments',
+              arguments: {'userId': userId},
+            );
+          }),
           _buildDrawerItem(context, Icons.money, 'Expenses', () {
             Navigator.pushNamed(
               context,

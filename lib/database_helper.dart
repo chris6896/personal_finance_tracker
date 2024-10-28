@@ -230,13 +230,13 @@ class DatabaseHelper {
   Future<int> insertSavings(int userId, Map<String, dynamic> savings) async {
     final db = await database;
     savings['user_id'] = userId;
-    savings['last_updated'] = DateTime.now().toIso8601String();
+    savings['date'] = DateTime.now().toIso8601String();
     return await db.insert(tableSavings, savings);
   }
 
   Future<int> updateSavings(int savingsId, Map<String, dynamic> savings) async {
     final db = await database;
-    savings['last_updated'] = DateTime.now().toIso8601String();
+    savings['date'] = DateTime.now().toIso8601String();
     return await db.update(
       tableSavings,
       savings,

@@ -4,6 +4,9 @@ import 'sign_up_screen.dart';
 import 'home_screen.dart';
 import 'income_tracking_screen.dart';
 import 'expense_tracking_screen.dart';
+import 'savings_tracking_screen.dart';  
+import 'report_screen.dart';
+import 'investments_screen.dart';
 import 'database_helper.dart';
 
 void main() async {
@@ -37,6 +40,14 @@ class MyApp extends StatelessWidget {
         '/expenses': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
           return ExpenseTrackingScreen(userId: args['userId']);
+        },
+        '/report': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return ReportScreen(userId: args['userId']);
+        },
+        '/investments': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return InvestmentsScreen(userId: args['userId']);
         },
       },
     );
