@@ -63,7 +63,7 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
           return;
         }
         
-        final interval = _selectedInterval.isNotEmpty ? _selectedInterval : 'Daily';
+        final interval = _selectedInterval.isNotEmpty ? _selectedInterval : 'Daily'; // Default Interval if none is Daily
         final savingsData = {
           'amount': amount,
           'interval': interval,
