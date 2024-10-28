@@ -12,6 +12,9 @@ class SavingsTrackingScreen extends StatefulWidget {
 
 class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
   final TextEditingController _savingsController = TextEditingController();
+  final TextEditingController _targetAmountController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+
   List<SavingsEntry> _savingsHistory = [];
   String? _errorMessage;
   SavingsEntry? _editingEntry;
@@ -34,14 +37,29 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
 
   Future<void> _addOrUpdateSavings() async {
     String input = _savingsController.text;
+    String targetInput = _targetAmountController.text;
 
-    if (_isValidNumber(input)) {
+    if (_isValidNumber(input) && _isValidNumber(targetInput)) {
       final amount = double.parse(input);
+      final targetAmount = double.parse(targetInput);
+
+      // Check if the savings amount exceeds the target amount
+      if (amount > targetAmount) {
+        setState(() {
+          _errorMessage = "Savings amount exceeds target amount.";
+        });
+        return;
+      }
+      final interval = _selectedInterval.isNotEmpty ? _selectedInterval : 'Daily';
       final savingsData = {
         'amount': amount,
-        'interval': _selectedInterval,
+        'interval': interval,
+        'target_amount': targetAmount,
+        'description': _descriptionController.text,
         'last_updated': DateTime.now().toIso8601String(),
+        'user_id': widget.userId,
       };
+
       final db = DatabaseHelper();
 
       // If editing, update the existing entry
@@ -58,15 +76,15 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
       _resetForm();
     } else {
       setState(() {
-        _errorMessage = "Please enter a valid number.";
+        _errorMessage = "Please enter valid numbers for amount and target amount.";
       });
     }
   }
 
   Future<void> _deleteSavings(SavingsEntry entry) async {
     final db = DatabaseHelper();
-    await db.deleteSavings(entry.id); // Ensure a delete method is added in `DatabaseHelper`
-    _loadSavings(); // Reload to show updated list
+    await db.deleteSavings(entry.id);
+    _loadSavings();
   }
 
   bool _isValidNumber(String input) {
@@ -78,6 +96,8 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
     setState(() {
       _editingEntry = entry;
       _savingsController.text = entry.amount.toString();
+      _targetAmountController.text = entry.targetAmount.toString();
+      _descriptionController.text = entry.description;
       _selectedInterval = entry.interval;
     });
   }
@@ -86,6 +106,8 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
     setState(() {
       _editingEntry = null;
       _savingsController.clear();
+      _targetAmountController.clear();
+      _descriptionController.clear();
       _selectedInterval = 'Daily';
       _errorMessage = null;
     });
@@ -94,6 +116,8 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
   void _resetForm() {
     setState(() {
       _savingsController.clear();
+      _targetAmountController.clear();
+      _descriptionController.clear();
       _selectedInterval = 'Daily';
       _errorMessage = null;
       _editingEntry = null;
@@ -107,6 +131,8 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
   @override
   void dispose() {
     _savingsController.dispose();
+    _targetAmountController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -148,6 +174,24 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: _targetAmountController,
+                      decoration: InputDecoration(
+                        labelText: 'Target Amount',
+                        prefixText: '\$',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: _descriptionController,
+                      decoration: InputDecoration(
+                        labelText: 'Description',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -208,7 +252,7 @@ class _SavingsTrackingScreenState extends State<SavingsTrackingScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        _formatDate(entry.date),
+                        '${entry.description}\n${_formatDate(entry.date)}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       trailing: Row(
@@ -242,13 +286,17 @@ class SavingsEntry {
   final int id;
   final DateTime date;
   final double amount;
+  final double targetAmount;
   final String interval;
+  final String description;
 
   SavingsEntry({
     required this.id,
     required this.date,
     required this.amount,
+    required this.targetAmount,
     required this.interval,
+    required this.description,
   });
 
   static SavingsEntry fromMap(Map<String, dynamic> map) {
@@ -256,7 +304,9 @@ class SavingsEntry {
       id: map['id'],
       date: DateTime.parse(map['date']),
       amount: map['amount'],
+      targetAmount: map['target_amount'] ?? 0.0,
       interval: map['interval'],
+      description: map['description'] ?? '',
     );
   }
 }

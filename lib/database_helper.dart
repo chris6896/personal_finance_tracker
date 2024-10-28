@@ -29,7 +29,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'finance_tracker.db');
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -100,7 +100,9 @@ class DatabaseHelper {
       CREATE TABLE $tableInvestments(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         asset_name TEXT NOT NULL,
+        quantity REAL DEFAULT 0,
         value REAL NOT NULL,
+        total_value REAL AS (quantity * value),
         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -124,14 +126,18 @@ class DatabaseHelper {
     if (oldVersion < 4) {
       await db.execute('ALTER TABLE $tableIncome ADD COLUMN frequency TEXT');
     }
+    if (oldVersion < 5) {
+      await db.execute('ALTER TABLE $tableInvestments ADD COLUMN quantity REAL DEFAULT 0');
+      await db.execute('ALTER TABLE $tableInvestments ADD COLUMN total_value REAL AS (quantity * value)');
+    }
   }
 
   Future<void> _insertInitialInvestments(Database db) async {
     final investments = [
-      {'asset_name': 'Gold', 'value': 1800.00},
-      {'asset_name': 'Bitcoin', 'value': 30000.00},
-      {'asset_name': 'Ethereum', 'value': 2000.00},
-      {'asset_name': 'SPY', 'value': 400.00},
+      {'asset_name': 'Gold', 'value': 1800.00, 'quantity': 1.0},
+      {'asset_name': 'Bitcoin', 'value': 30000.00, 'quantity': 0.5},
+      {'asset_name': 'Ethereum', 'value': 2000.00, 'quantity': 2.0},
+      {'asset_name': 'SPY', 'value': 400.00, 'quantity': 10.0},
     ];
 
     Batch batch = db.batch();
@@ -145,8 +151,6 @@ class DatabaseHelper {
     final db = await database;
     try {
       String hashedPassword = _hashPassword(password);
-      print('Inserting user with email: $email and hashed password: $hashedPassword');
-
       return await db.insert(tableUsers, {
         'username': name,
         'age': age,
@@ -164,15 +168,11 @@ class DatabaseHelper {
     final db = await database;
     try {
       final hashedPassword = _hashPassword(password);
-      print('Authenticating user with email: $email and hashed password: $hashedPassword');
-
       final result = await db.query(
         tableUsers,
         where: 'email = ? AND password = ?',
         whereArgs: [email, hashedPassword],
       );
-
-      print('Authentication query result: $result');
 
       if (result.isNotEmpty) {
         await db.update(
@@ -342,17 +342,32 @@ class DatabaseHelper {
            (expenses.first['total'] as num).toDouble();
   }
 
-  Future<void> updateInvestmentValue(String assetName, double newValue) async {
+  Future<void> updateInvestmentValue(String assetName, double newValue, double quantity) async {
     final db = await database;
     await db.update(
       tableInvestments,
       {
         'value': newValue,
+        'quantity': quantity,
         'last_updated': DateTime.now().toIso8601String(),
       },
       where: 'asset_name = ?',
       whereArgs: [assetName],
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getInvestments() async {
+    final db = await database;
+    return await db.query(
+      tableInvestments,
+      orderBy: 'last_updated DESC',
+    );
+  }
+
+  Future<int> insertInvestment(Map<String, dynamic> investmentData) async {
+    final db = await database;
+    investmentData['last_updated'] = DateTime.now().toIso8601String();
+    return await db.insert(tableInvestments, investmentData);
   }
 
   Future<void> close() async {

@@ -1,90 +1,75 @@
 import 'package:flutter/material.dart';
+import 'database_helper.dart';
 
-class InvestmentsScreen extends StatelessWidget {
+class InvestmentsScreen extends StatefulWidget {
   final int userId;
 
   const InvestmentsScreen({Key? key, required this.userId}) : super(key: key);
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Divider(thickness: 2),
-        ],
-      ),
-    );
+  @override
+  _InvestmentsScreenState createState() => _InvestmentsScreenState();
+}
+
+class _InvestmentsScreenState extends State<InvestmentsScreen> {
+  List<Map<String, dynamic>> _investmentList = [];
+
+  final TextEditingController _assetNameController = TextEditingController();
+  final TextEditingController _quantityController = TextEditingController();
+  final TextEditingController _valueController = TextEditingController();
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInvestments();
   }
 
-  Widget _buildPlaceholderPieChart() {
-    return Container(
-      height: 150,
-      width: 150,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.grey,
-      ),
-      child: Center(
-        child: Text(
-          'Pie Chart',
-          style: TextStyle(color: Colors.white, fontSize: 16),
-        ),
-      ),
-    );
+  Future<void> _loadInvestments() async {
+    final db = DatabaseHelper();
+    final investments = await db.getInvestments();
+    setState(() {
+      _investmentList = investments;
+    });
   }
 
-  Widget _buildPlaceholderLineChart() {
-    return Container(
-      height: 100,
-      width: double.infinity,
-      color: Colors.grey[300],
-      child: Center(
-        child: Text(
-          'Line Chart',
-          style: TextStyle(color: Colors.black54, fontSize: 16),
-        ),
-      ),
-    );
+  Future<void> _addInvestment() async {
+    if (_isValidInput()) {
+      final db = DatabaseHelper();
+      final investmentData = {
+        'asset_name': _assetNameController.text,
+        'quantity': double.parse(_quantityController.text),
+        'value': double.parse(_valueController.text),
+        'last_updated': DateTime.now().toIso8601String(),
+      };
+      await db.insertInvestment(investmentData);
+      _resetForm();
+      _loadInvestments();
+    } else {
+      setState(() {
+        _errorMessage = "Please enter valid input for all fields.";
+      });
+    }
   }
 
-  Widget _buildLegendItem(String title, Color color) {
-    return Row(
-      children: [
-        Icon(Icons.circle, size: 8, color: color),
-        const SizedBox(width: 4),
-        Text(
-          title,
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
-        ),
-      ],
-    );
+  bool _isValidInput() {
+    final quantity = double.tryParse(_quantityController.text);
+    final value = double.tryParse(_valueController.text);
+    return _assetNameController.text.isNotEmpty && quantity != null && value != null && quantity > 0 && value > 0;
   }
 
-  Widget _buildCryptoListItem(String name, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            name,
-            style: const TextStyle(fontSize: 14),
-          ),
-          Text(
-            '\$$value',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
+  void _resetForm() {
+    _assetNameController.clear();
+    _quantityController.clear();
+    _valueController.clear();
+    _errorMessage = null;
+  }
+
+  @override
+  void dispose() {
+    _assetNameController.dispose();
+    _quantityController.dispose();
+    _valueController.dispose();
+    super.dispose();
   }
 
   @override
@@ -92,45 +77,102 @@ class InvestmentsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Investments'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadInvestments,
+          )
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader("Portfolio"),
-            Row(
-              children: [
-                _buildLegendItem("Retirement", Colors.grey),
-                const SizedBox(width: 16),
-                _buildLegendItem("Stocks", Colors.yellow),
-                const SizedBox(width: 16),
-                _buildLegendItem("Cryptocurrency", Colors.orange),
-              ],
+            _buildInvestmentForm(),
+            const SizedBox(height: 20),
+            Expanded(
+              child: _buildInvestmentList(),
             ),
-            const SizedBox(height: 16),
-            Center(child: _buildPlaceholderPieChart()),
-            const SizedBox(height: 24),
-            _buildSectionHeader("Watchlist"),
-            Row(
-              children: [
-                _buildLegendItem("NVIDIA", Colors.grey),
-                const SizedBox(width: 16),
-                _buildLegendItem("AMD", Colors.pink),
-                const SizedBox(width: 16),
-                _buildLegendItem("INTL", Colors.brown),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildPlaceholderLineChart(),
-            const SizedBox(height: 24),
-            _buildSectionHeader("Crypto"),
-            _buildCryptoListItem("BTC", "120.42"),
-            _buildCryptoListItem("DOGE", "980.76"),
-            _buildCryptoListItem("USDC", "420.83"),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInvestmentForm() {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Text(
+              'Add New Investment',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _assetNameController,
+              decoration: const InputDecoration(
+                labelText: 'Asset Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _quantityController,
+              decoration: const InputDecoration(
+                labelText: 'Quantity',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _valueController,
+              decoration: const InputDecoration(
+                labelText: 'Unit Value',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ],
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _addInvestment,
+              child: const Text('Add Investment'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInvestmentList() {
+    return ListView.builder(
+      itemCount: _investmentList.length,
+      itemBuilder: (context, index) {
+        final investment = _investmentList[index];
+        final assetName = investment['asset_name'];
+        final quantity = investment['quantity'];
+        final value = investment['value'];
+        final totalValue = quantity * value;
+
+        return Card(
+          child: ListTile(
+            title: Text(assetName),
+            subtitle: Text(
+              'Quantity: $quantity\nUnit Value: \$${value.toStringAsFixed(2)}\nTotal Value: \$${totalValue.toStringAsFixed(2)}',
+            ),
+          ),
+        );
+      },
     );
   }
 }
