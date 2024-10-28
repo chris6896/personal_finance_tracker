@@ -49,22 +49,31 @@ class _IncomeTrackingScreenState extends State<IncomeTrackingScreen> {
         int result;
         if (_editingEntry != null) {
           result = await db.insertIncome(widget.userId, incomeData);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Income updated successfully!")),
-          );
           _editingEntry = null;
+          if (result != -1) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Income updated successfully!")),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Failed to update income entry. Please try again.")),
+            );
+          }
         } else {
           result = await db.insertIncome(widget.userId, incomeData);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Income added successfully!")),
-          );
+          if (result != -1) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Income added successfully!")),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Failed to save income entry. Please try again.")),
+            );
+          }
         }
 
-        if (result == -1) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Failed to save income entry. Please try again.")),
-          );
-        } else {
+        // Reload income if insertion or update was successful
+        if (result != -1) {
           await _loadIncome();
           _resetForm();
         }
